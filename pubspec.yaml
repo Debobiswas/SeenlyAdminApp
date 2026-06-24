@@ -26,3 +26,5 @@ flutter:
   assets:
     - .env
 
+dependency_overrides:
+  device_info_plus: 11.2.1
