@@ -1,0 +1,50 @@
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+/build/
+
+# iOS/macOS ephemeral files
+/ios/Flutter/ephemeral/
+/ios/Flutter/Generated.xcconfig
+/ios/Flutter/flutter_export_environment.sh
+/ios/Flutter/flutter_multiclass*
+**/Pods/
+**/.symlinks/
+**/doc/api/
+.metadata
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+
+# Android ephemeral files
+.gradle/
+/android/local.properties
+**/flutter_plugin_actions.json
+*.keystore
+*.jks
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Secrets & Environment variables
+.env
+.env*
+*.local
+
+# Temporary diagnostics and logs
+*.hprof
+*.log
+android/java_pid*
