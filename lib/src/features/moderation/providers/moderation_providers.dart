@@ -13,18 +13,18 @@ final moderationRepositoryProvider = Provider<ModerationRepository>((ref) {
 
 final moderationSearchProvider = StateProvider<String>((ref) => '');
 
-final showAllProfilesProvider = StateProvider<bool>((ref) => false);
+final selectedStatusesProvider = StateProvider<Set<ProfileStatus>>((ref) => {ProfileStatus.pending});
 
 final pendingProfilesProvider =
     FutureProvider.autoDispose.family<List<ModerationProfile>, AccountType?>((ref, accountType) async {
   final repository = ref.watch(moderationRepositoryProvider);
   final search = ref.watch(moderationSearchProvider);
-  final showAll = ref.watch(showAllProfilesProvider);
+  final selectedStatuses = ref.watch(selectedStatusesProvider);
 
   return repository.fetchPendingProfiles(
     accountType: accountType,
     search: search,
-    pendingOnly: !showAll,
+    statuses: selectedStatuses,
   );
 });
 

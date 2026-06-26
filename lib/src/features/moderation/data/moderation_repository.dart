@@ -15,13 +15,31 @@ class ModerationRepository {
   Future<List<ModerationProfile>> fetchPendingProfiles({
     AccountType? accountType,
     String search = '',
-    bool pendingOnly = true,
+    Set<ProfileStatus>? statuses,
   }) async {
+    if (statuses != null && statuses.isEmpty) {
+      return [];
+    }
+
     const fields = 'id, email, full_name, name, role, tier, status, created_at, instagram_handle, tiktok_handle';
     var query = _client.from('profiles').select(fields);
-    if (pendingOnly) {
+    
+    if (statuses != null) {
+      final hasPending = statuses.contains(ProfileStatus.pending);
+      final hasActive = statuses.contains(ProfileStatus.active);
+      if (hasPending && hasActive) {
+        // No status filter -> show all users
+      } else if (hasPending) {
+        query = query.eq('status', 'pending');
+      } else if (hasActive) {
+        query = query.eq('status', 'active');
+      } else {
+        query = query.inFilter('status', statuses.map((s) => s.name).toList());
+      }
+    } else {
       query = query.eq('status', 'pending');
     }
+
     final response = await query.order('created_at', ascending: false);
     final list = (response as List<dynamic>)
         .cast<Map<String, dynamic>>()

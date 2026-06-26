@@ -49,10 +49,11 @@ jobs:
           flutter pub get
 
       # 4.5 Create .env file
-      # Since .env is usually gitignored, Flutter will fail if it's missing during the build.
-      # You can populate this with actual secrets later by using: echo "KEY_NAME=${{ secrets.MY_SECRET }}" >> .env
+      # Populates the .env file with secrets defined in GitHub repository settings.
       - name: Create .env file
-        run: touch .env
+        run: |
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}" >> .env
 
       # 5. Set up iOS Code Signing (Only executed if secrets are present)
       # In GitHub repository settings, you'd add:

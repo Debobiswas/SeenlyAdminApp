@@ -42,6 +42,7 @@ Thumbs.db
 # Secrets & Environment variables
 .env
 .env*
+profile_base64.txt
 *.local
 
 # Temporary diagnostics and logs

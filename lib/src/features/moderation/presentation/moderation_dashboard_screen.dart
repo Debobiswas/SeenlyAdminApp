@@ -219,7 +219,6 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
 
   @override
   Widget build(BuildContext context) {
-    final searchQuery = ref.watch(moderationSearchProvider);
     final theme = Theme.of(context);
 
     // Listen to changes in search query from outside to synchronize the controller
@@ -238,27 +237,7 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
 
         return Column(
           children: [
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Row(
-                children: [
-                  Text(
-                    'Overview',
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (searchQuery.isNotEmpty)
-                    _FilterSummaryChip(
-                      label: 'Search: "$searchQuery"',
-                      icon: Icons.search_rounded,
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 12),
+
             SizedBox(
               width: double.infinity,
               child: SingleChildScrollView(
@@ -282,27 +261,6 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Consumer(
-                      builder: (context, ref, _) {
-                        final showAll = ref.watch(showAllProfilesProvider);
-                        return OutlinedButton.icon(
-                          onPressed: () {
-                            ref.read(showAllProfilesProvider.notifier).state = !showAll;
-                          },
-                          icon: Icon(
-                            showAll ? Icons.people_rounded : Icons.pending_actions_rounded,
-                          ),
-                          label: Text(showAll ? 'Show: All' : 'Show: Pending'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            backgroundColor: showAll
-                                ? theme.colorScheme.primaryContainer.withValues(alpha: 0.2)
-                                : null,
-                          ),
-                        );
-                      },
-                    ),
                   ],
                 ),
               ),
@@ -315,18 +273,32 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                 border: Border.all(
                   color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
                 ),
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.colorScheme.shadow.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
               child: Row(
                 children: [
-                  Icon(
-                    Icons.search_rounded,
+                  IconButton(
+                    icon: const Icon(Icons.search_rounded),
                     color: theme.colorScheme.onSurfaceVariant,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () {
+                      ref.read(moderationSearchProvider.notifier).state = _searchController.text.trim();
+                    },
+                    tooltip: 'Search',
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: TextField(
                       controller: _searchController,
+                      textInputAction: TextInputAction.search,
                       decoration: const InputDecoration(
                         hintText: 'Search pending profiles by name, email, or handle...',
                         border: InputBorder.none,
@@ -336,9 +308,6 @@ class _DashboardContentState extends ConsumerState<_DashboardContent> {
                         disabledBorder: InputBorder.none,
                         contentPadding: EdgeInsets.symmetric(vertical: 12),
                       ),
-                      onChanged: (value) {
-                        ref.read(moderationSearchProvider.notifier).state = value.trim();
-                      },
                       onSubmitted: (value) {
                         ref.read(moderationSearchProvider.notifier).state = value.trim();
                       },
@@ -608,47 +577,17 @@ class _MetricCard extends StatelessWidget {
   }
 }
 
-class _FilterBottomSheet extends ConsumerStatefulWidget {
+class _FilterBottomSheet extends ConsumerWidget {
   const _FilterBottomSheet({required this.accountType});
 
   final AccountType accountType;
 
   @override
-  ConsumerState<_FilterBottomSheet> createState() => _FilterBottomSheetState();
-}
-
-class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
-  late final TextEditingController _searchController;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController = TextEditingController(
-      text: ref.read(moderationSearchProvider),
-    );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final pendingProfiles = ref.watch(pendingProfilesProvider(widget.accountType));
-
-    // Listen to changes in search query from outside to synchronize the controller
-    ref.listen<String>(moderationSearchProvider, (previous, next) {
-      if (_searchController.text != next) {
-        _searchController.value = TextEditingValue(
-          text: next,
-          selection: TextSelection.collapsed(offset: next.length),
-        );
-      }
-    });
+    final pendingProfiles = ref.watch(pendingProfilesProvider(accountType));
+    final selectedStatuses = ref.watch(selectedStatusesProvider);
 
     return SafeArea(
       child: Padding(
@@ -679,37 +618,42 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
             const Divider(),
             const SizedBox(height: 16),
             Text(
-              'Search Profiles',
+              'Profile Status',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
             const SizedBox(height: 8),
-            TextField(
-              controller: _searchController,
-              onSubmitted: (value) {
-                ref.read(moderationSearchProvider.notifier).state = value.trim();
-              },
-              decoration: InputDecoration(
-                hintText: 'Name, email, or handle',
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: _searchController,
-                  builder: (context, value, child) {
-                    if (value.text.isEmpty) {
-                      return const SizedBox.shrink();
+            Row(
+              children: [
+                FilterChip(
+                  label: const Text('Pending'),
+                  selected: selectedStatuses.contains(ProfileStatus.pending),
+                  onSelected: (selected) {
+                    final newStatuses = Set<ProfileStatus>.from(selectedStatuses);
+                    if (selected) {
+                      newStatuses.add(ProfileStatus.pending);
+                    } else {
+                      newStatuses.remove(ProfileStatus.pending);
                     }
-                    return IconButton(
-                      icon: const Icon(Icons.clear_rounded),
-                      onPressed: () {
-                        _searchController.clear();
-                        ref.read(moderationSearchProvider.notifier).state = '';
-                      },
-                      tooltip: 'Clear search',
-                    );
+                    ref.read(selectedStatusesProvider.notifier).state = newStatuses;
                   },
                 ),
-              ),
+                const SizedBox(width: 12),
+                FilterChip(
+                  label: const Text('Active'),
+                  selected: selectedStatuses.contains(ProfileStatus.active),
+                  onSelected: (selected) {
+                    final newStatuses = Set<ProfileStatus>.from(selectedStatuses);
+                    if (selected) {
+                      newStatuses.add(ProfileStatus.active);
+                    } else {
+                      newStatuses.remove(ProfileStatus.active);
+                    }
+                    ref.read(selectedStatusesProvider.notifier).state = newStatuses;
+                  },
+                ),
+              ],
             ),
             const SizedBox(height: 24),
             Row(
@@ -741,15 +685,7 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
                 ),
                 const SizedBox(width: 8),
                 IconButton.filledTonal(
-                  onPressed: () {
-                    ref.read(moderationSearchProvider.notifier).state = _searchController.text.trim();
-                  },
-                  icon: const Icon(Icons.search_rounded),
-                  tooltip: 'Search',
-                ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  onPressed: () => ref.invalidate(pendingProfilesProvider(widget.accountType)),
+                  onPressed: () => ref.invalidate(pendingProfilesProvider(accountType)),
                   icon: const Icon(Icons.refresh_rounded),
                   tooltip: 'Refresh queue',
                 ),
@@ -757,10 +693,7 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
             ),
             const SizedBox(height: 24),
             FilledButton(
-              onPressed: () {
-                ref.read(moderationSearchProvider.notifier).state = _searchController.text.trim();
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
               child: const Text('Apply & Close'),
             ),
           ],
@@ -787,9 +720,10 @@ class _ProfileListPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListView.separated(
+        clipBehavior: Clip.none,
         padding: const EdgeInsets.all(14),
         itemCount: profiles.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
+        separatorBuilder: (_, __) => const SizedBox(height: 14),
         itemBuilder: (context, index) {
           final profile = profiles[index];
           return _ProfileCard(
@@ -968,14 +902,41 @@ class _ProfileCardState extends ConsumerState<_ProfileCard> {
           child: Ink(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-              color: colorScheme.surface.withValues(alpha: 0.68),
+              color: switch (widget.profile.status) {
+                ProfileStatus.active => Color.lerp(colorScheme.surface, Colors.green, 0.08),
+                ProfileStatus.pending => Color.lerp(colorScheme.surface, Colors.red, 0.08),
+                _ => colorScheme.surface.withValues(alpha: 0.68),
+              },
               border: Border.all(
-                color: colorScheme.outlineVariant,
-                width: 1,
+                color: widget.isSelected
+                    ? colorScheme.primary
+                    : switch (widget.profile.status) {
+                        ProfileStatus.active => Color.lerp(colorScheme.outlineVariant, Colors.green, 0.3) ?? colorScheme.outlineVariant,
+                        ProfileStatus.pending => Color.lerp(colorScheme.outlineVariant, Colors.red, 0.3) ?? colorScheme.outlineVariant,
+                        _ => colorScheme.outlineVariant,
+                      },
+                width: widget.isSelected ? 2 : 1,
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: colorScheme.shadow.withValues(alpha: 0.03),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+                BoxShadow(
+                  color: (widget.profile.status == ProfileStatus.active
+                          ? Colors.green
+                          : widget.profile.status == ProfileStatus.pending
+                              ? Colors.red
+                              : colorScheme.shadow)
+                      .withValues(alpha: 0.04),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
@@ -1924,44 +1885,7 @@ IconData _accountTypeIcon(ModerationProfile profile) {
   return Icons.person_outline_rounded;
 }
 
-class _FilterSummaryChip extends StatelessWidget {
-  const _FilterSummaryChip({
-    required this.label,
-    required this.icon,
-  });
 
-  final String label;
-  final IconData icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: colorScheme.primaryContainer.withValues(alpha: 0.5),
-        border: Border.all(color: colorScheme.primary.withValues(alpha: 0.2)),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 14, color: colorScheme.primary),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: theme.textTheme.labelMedium?.copyWith(
-              color: colorScheme.primary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class InstagramLogo extends StatelessWidget {
   const InstagramLogo({super.key, this.size = 24, this.color});

@@ -1,7 +1,7 @@
 name: seenly_admin_app
 description: Seenly admin Flutter application for account moderation workflows.
 publish_to: none
-version: 0.1.24+25
+version: 0.1.26+27
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
